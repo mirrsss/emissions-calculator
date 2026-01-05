@@ -1,17 +1,37 @@
 # shared_state.py
 import streamlit as st
+from datetime import date
 
 def init_state():
     """
     Initializes the session state variables if they don't exist.
     """
     defaults = {
-        # General Settings
-        "gi_region": "Indonesia",   # <--- ADDED THIS LINE
-        "gi_country": "Indonesia", 
-        "soil_divisor": 20,
+        # General Info - Project Details
+        "gi_user_name": "",
+        "gi_date": date.today(),
+        "gi_project_name": "",
+        "gi_project_cost": 0,
+        "gi_funding_agency": "CAFI",
+        "gi_executing_agency": "",
+        
+        # General Info - Site Details
+        "gi_region": "Central Africa",
+        "gi_country": "Cameroon", # Default to a CA country
+        "gi_climate": "Tropical montane",
+        "gi_moisture": "Moist",
+        "gi_soil": "Spodic soils",
+        "gi_impl_phase": 4,
+        "gi_cap_phase": 10,
+
+        # Activity Checkboxes
+        "check_energy": False,
+        "check_arr": False,
+        "check_agri": True,
+        "check_forest": False,
         
         # Agri Logic State
+        "soil_divisor": 20,
         "agri_3_1_total": 0.0,
         "agri_3_2_total": 0.0,
         "agri_3_3_total": 0.0,
