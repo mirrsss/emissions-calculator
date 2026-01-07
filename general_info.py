@@ -24,12 +24,11 @@ def render_general_info():
         with st.container(border=True):
             st.markdown("#### 📘 Project Description")
             
-            # Using session state callbacks to save data immediately
-            st.text_input("User Name", key="gi_user_name")
-            st.date_input("Date", key="gi_date")
-            st.text_input("Project Name", key="gi_project_name")
+            st.text_input("User Name", key="gi_user_name", value=shared_state.get("gi_user_name") or "")
+            st.date_input("Date", key="gi_date", value=date.today())
+            st.text_input("Project Name", key="gi_project_name", value=shared_state.get("gi_project_name") or "")
             st.number_input("Project Cost (USD)", key="gi_project_cost", min_value=0, step=1000)
-            st.text_input("Funding Agency", key="gi_funding_agency")
+            st.text_input("Funding Agency", key="gi_funding_agency", value="CAFI")
             st.text_input("Executing Agency", key="gi_executing_agency")
 
     # RIGHT COLUMN: Site & Duration
@@ -37,40 +36,33 @@ def render_general_info():
         with st.container(border=True):
             st.markdown("#### 🌍 Project Site and Duration")
             
-            # Region/Country Selection
+            # Region Selector
+            current_region = shared_state.get("gi_region") or "Central Africa"
             region_opts = ["Central Africa", "Indonesia", "Brazil"]
-            
-            # Ensure valid index for region
-            curr_reg = shared_state.get("gi_region")
-            reg_idx = region_opts.index(curr_reg) if curr_reg in region_opts else 0
-            
-            region = st.selectbox("Region", region_opts, index=reg_idx, key="region_selector")
-            # Update state manually if changed
+            region = st.selectbox("Region", region_opts, index=region_opts.index(current_region) if current_region in region_opts else 0)
             if region != shared_state.get("gi_region"):
                 shared_state.set("gi_region", region)
             
-            # Country Logic based on Region
+            # Country Logic
             if region == "Central Africa":
                 c_options = ["Cameroon", "Central African Republic", "Republic of Congo", "Democratic Republic of the Congo", "Equatorial Guinea", "Gabon"]
             else:
                 c_options = [region]
             
-            # Ensure valid index for country
-            curr_country = shared_state.get("gi_country")
-            c_idx = c_options.index(curr_country) if curr_country in c_options else 0
+            country = st.selectbox("Country", c_options, key="gi_country_select")
+            shared_state.set("gi_country", country)
 
-            country = st.selectbox("Country", c_options, index=c_idx, key="country_selector")
-            if country != shared_state.get("gi_country"):
-                shared_state.set("gi_country", country)
-
-            # Other Inputs
+            # Expanded Soil List based on feedback
+            soil_types = [
+                "Spodic soils", "Volcanic soils", "Clay soils", "Sandy soils", 
+                "Loam soils", "Wetland/Organic soils", "Other"
+            ]
             st.selectbox("Climate", ["Tropical montane", "Tropical wet", "Tropical dry"], key="gi_climate")
             st.selectbox("Moisture", ["Moist", "Wet", "Dry"], key="gi_moisture")
-            st.selectbox("Soil Type", ["Spodic soils", "Volcanic soils", "Clay soils", "Sandy soils"], key="gi_soil")
+            st.selectbox("Soil Type", soil_types, key="gi_soil")
 
             st.divider()
             
-            # Durations
             c1, c2 = st.columns(2)
             impl = c1.number_input("Implementation (yrs)", min_value=0, value=4, key="gi_impl_phase")
             cap = c2.number_input("Capitalization (yrs)", min_value=0, value=10, key="gi_cap_phase")
@@ -87,7 +79,13 @@ def render_general_info():
             
             st.checkbox("1. Energy (Cookstoves, Fuel substitution)", key="check_energy")
             st.checkbox("2. Afforestation & Reforestation", key="check_arr")
-            st.checkbox("3. Agriculture (Outgrower, Intensification)", value=True, key="check_agri") 
+            
+            # Updated Titles here
+            st.markdown("**3. Agriculture**")
+            st.checkbox("3.1 Deforestation-free outgrower schemes", value=True, key="check_agri_3_1")
+            st.checkbox("3.2 Agro-industrial plantations", value=True, key="check_agri_3_2")
+            st.checkbox("3.3 Sustainable intensification", value=True, key="check_agri_3_3")
+            
             st.checkbox("4. Forestry & Conservation", key="check_forest")
 
     # RIGHT: Summary
@@ -96,15 +94,12 @@ def render_general_info():
             st.markdown("#### 📊 Summary")
             st.write("Mitigation potential for the following sectors:")
             
-            if st.session_state.get("check_energy"):
-                st.markdown("- (i) Energy")
-            if st.session_state.get("check_arr"):
-                st.markdown("- (ii) Afforestation & Reforestation")
-            if st.session_state.get("check_agri"):
-                st.markdown("- (iii) Agriculture")
-            if st.session_state.get("check_forest"):
-                st.markdown("- (iv) Forestry & Conservation")
+            if st.session_state.get("check_energy"): st.markdown("- Energy")
+            if st.session_state.get("check_arr"): st.markdown("- Afforestation & Reforestation")
+            if st.session_state.get("check_agri_3_1") or st.session_state.get("check_agri_3_2") or st.session_state.get("check_agri_3_3"):
+                st.markdown("- Agriculture")
+            if st.session_state.get("check_forest"): st.markdown("- Forestry & Conservation")
                 
             st.divider()
-            agri_total = shared_state.get("agri_3_1_total") + shared_state.get("agri_3_2_total") + shared_state.get("agri_3_3_total")
+            agri_total = shared_state.get("agri_grand_total") or 0.0
             st.metric("Total Emissions Reduction (So Far)", f"{agri_total:,.2f} tCO2e")
