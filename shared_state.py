@@ -17,7 +17,7 @@ def init_state():
         
         # General Info - Site Details
         "gi_region": "Central Africa",
-        "gi_country": "Cameroon", # Default to a CA country
+        "gi_country": "Cameroon", 
         "gi_climate": "Tropical montane",
         "gi_moisture": "Moist",
         "gi_soil": "Spodic soils",
@@ -32,6 +32,10 @@ def init_state():
         
         # Agri Logic State
         "soil_divisor": 20,
+        "agri_grand_total": 0.0,      # <--- ADDED THIS (Fixes the crash)
+        "agri_results_table": [],     # <--- ADDED THIS
+        
+        # Keep individual totals just in case
         "agri_3_1_total": 0.0,
         "agri_3_2_total": 0.0,
         "agri_3_3_total": 0.0,
