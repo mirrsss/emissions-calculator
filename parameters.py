@@ -1,4 +1,5 @@
 # parameters.py
+import imported_data  # <--- Loads the data extracted from Excel
 
 # --- Agriculture Parameters ---
 
@@ -8,22 +9,11 @@ RESIDUE_MULTIPLIER_BY_REGION = {
     "Brazil": 0.47
 }
 
-# Added "Tea" to this list as requested.
-# Values are (AGB, BGB, Soil Carbon Stock). 
-# Note: Using "Shaded perennial" values as default placeholder for Tea until specific values are provided.
+# Use the exact list from the Excel file
 DEFAULT_AGB_BGB_SOIL_BY_REGION = {
-    region: {
-        "Alley cropping": (2.75, 0.59, 27.3),
-        "Hedgerow": (0.47, 0.11, 27.3),
-        "Multistrata": (2.98, 0.72, 27.3),
-        "Parkland": (0.59, 0.21, 27.3),
-        "Perennial fallow": (5.3, 1.27, 27.3),
-        "Shaded perennial": (1.82, 0.44, 27.3),
-        "Tea": (1.82, 0.44, 27.3), # Added Tea
-        "Silvopasture": (2.91, 0.79, 27.3),
-        "Silvoarable": (5.09, 1.22, 27.3),
-    }
-    for region in ["Central Africa", "Indonesia", "Brazil"]
+    "Central Africa": imported_data.AGRI_CROP_DATA,
+    "Indonesia": imported_data.AGRI_CROP_DATA,
+    "Brazil": imported_data.AGRI_CROP_DATA
 }
 
 REMOVAL_FACTORS_BY_REGION = {

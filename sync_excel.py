@@ -1,0 +1,132 @@
+# sync_excel.py
+import pandas as pd
+import sys
+
+def normalize_header(h):
+    """Normalize strings to match our code (e.g. 'Crop System' -> 'crop')"""
+    if not isinstance(h, str): return ""
+    h = header.lower().strip()
+    if "crop" in h or "system" in h: return "Crop System"
+    if "area" in h: return "Area (ha)"
+    if "agb" in h: return "AGB"
+    if "bgb" in h: return "BGB"
+    if "soil" in h: return "Soil"
+    return header
+
+def sync_data():
+    print("... Reading CMT_v1.1.xlsm ...")
+    try:
+        # Load the Excel File
+        xls = pd.ExcelFile("CMT_v1.1.xlsm")
+        sheet_names = xls.sheet_names
+        print(f"Found sheets: {sheet_names}")
+
+        # ----------------------------------------
+        # 1. EXTRACT START PAGE LISTS
+        # ----------------------------------------
+        # We look for a sheet with 'Start' or 'General' in the name
+        start_sheet = next((s for s in sheet_names if "Start" in s or "General" in s), None)
+        
+        soil_types = []
+        climates = []
+        moistures = []
+        
+        if start_sheet:
+            print(f"Reading Start Page: {start_sheet}")
+            df_start = pd.read_excel(xls, sheet_name=start_sheet)
+            
+            # Heuristic: Look for columns that might contain these lists
+            # We convert the whole sheet to a list of values to find keywords
+            for col in df_start.columns:
+                unique_vals = df_start[col].dropna().astype(str).unique()
+                
+                # Check for Soil list
+                if any("Spodic" in v or "Sandy" in v for v in unique_vals):
+                    soil_types = [v for v in unique_vals if len(v) < 50] # Filter out long text
+                
+                # Check for Climate list
+                if any("Tropical" in v or "Montane" in v for v in unique_vals):
+                    climates = [v for v in unique_vals if len(v) < 50]
+
+                # Check for Moisture list
+                if any("Wet" in v or "Moist" in v for v in unique_vals):
+                    moistures = [v for v in unique_vals if len(v) < 50]
+
+        # Fallbacks if extraction fails
+        if not soil_types: soil_types = ["Spodic soils", "Volcanic soils", "Clay soils", "Sandy soils", "Loam soils", "Wetland/Organic soils"]
+        if not climates: climates = ["Tropical montane", "Tropical wet", "Tropical dry"]
+        if not moistures: moistures = ["Moist", "Wet", "Dry"]
+
+        # ----------------------------------------
+        # 2. EXTRACT AGRICULTURE PARAMETERS
+        # ----------------------------------------
+        # Look for sheet with 'Agri'
+        agri_sheet = next((s for s in sheet_names if "Agri" in s), None)
+        
+        agri_data = {}
+        
+        if agri_sheet:
+            print(f"Reading Agriculture Page: {agri_sheet}")
+            # Read first 50 rows to find the header
+            df_raw = pd.read_excel(xls, sheet_name=agri_sheet, header=None, nrows=50)
+            
+            # Find the row that contains "Crop" and "AGB"
+            header_row_idx = None
+            for idx, row in df_raw.iterrows():
+                row_str = row.astype(str).str.lower().values
+                if any("crop" in x for x in row_str) and any("agb" in x for x in row_str):
+                    header_row_idx = idx
+                    break
+            
+            if header_row_idx is not None:
+                # Reload with correct header
+                df_agri = pd.read_excel(xls, sheet_name=agri_sheet, header=header_row_idx)
+                
+                # Clean column names
+                df_agri.columns = [normalize_header(c) for c in df_agri.columns]
+                
+                # Extract valid rows
+                if "Crop System" in df_agri.columns and "AGB" in df_agri.columns:
+                    for _, row in df_agri.iterrows():
+                        crop = row["Crop System"]
+                        if pd.notna(crop) and isinstance(crop, str) and "Select" not in crop:
+                            # Extract defaults (handle non-numeric gracefully)
+                            try: agb = float(row["AGB"])
+                            except: agb = 0.0
+                            try: bgb = float(row["BGB"])
+                            except: bgb = 0.0
+                            try: soil = float(row["Soil"])
+                            except: soil = 0.0
+                            
+                            agri_data[crop] = (agb, bgb, soil)
+            else:
+                print("Could not find Crop/AGB table headers.")
+
+        # If extraction failed, add at least one default
+        if not agri_data:
+            agri_data = {"Genetic Crop (Fallback)": (0,0,0)}
+
+        # ----------------------------------------
+        # 3. WRITE TO PYTHON FILE
+        # ----------------------------------------
+        with open("imported_data.py", "w", encoding="utf-8") as f:
+            f.write("# This file is auto-generated by sync_excel.py\n\n")
+            
+            f.write(f"SOIL_TYPES = {soil_types}\n")
+            f.write(f"CLIMATES = {climates}\n")
+            f.write(f"MOISTURES = {moistures}\n\n")
+            
+            f.write("# Format: {Crop Name: (AGB, BGB, Soil)}\n")
+            f.write("AGRI_CROP_DATA = {\n")
+            for crop, values in agri_data.items():
+                f.write(f"    '{crop}': {values},\n")
+            f.write("}\n")
+
+        print("SUCCESS! Created 'imported_data.py'.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        print("Please ensure 'CMT_v1.1.xlsm' is in the same folder.")
+
+if __name__ == "__main__":
+    sync_data()
